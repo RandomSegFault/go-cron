@@ -17,17 +17,17 @@ func main() {
 	os.Args = flagArgs
 
 	var (
-		help     = flag.Bool("h", false, "display usage")
-		port     = flag.String("p", "18080", "bind healthcheck to a specific port, set to 0 to not open HTTP port at all")
-		schedule = flag.String("s", "* * * * *", "schedule the task the cron style")
-		logDate  = flag.Bool("d", false, "print log timestamp")
-		logPid   = flag.Bool("pid", false, "print pid in logs")
-		logQuiet = flag.Bool("q", false, "only output the output of the command")
+		help      = flag.Bool("h", false, "display usage")
+		port      = flag.String("p", "18080", "bind healthcheck to a specific port, set to 0 to not open HTTP port at all")
+		schedule  = flag.String("s", "* * * * *", "schedule the task the cron style")
+		noLogDate = flag.Bool("no-timestamp", false, "do not print show timestamp in logs")
+		noLogPid  = flag.Bool("no-pid", false, "do not print pid in logs")
+		logQuiet  = flag.Bool("quiet", false, "only output the output of the command")
 	)
 
 	flag.Parse()
 
-	if !*logDate {
+	if *noLogDate {
 		log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
 	}
 
@@ -39,7 +39,7 @@ func main() {
 	}
 	log.Println("Running version:", build)
 
-	c, wg := gocron.Create(*schedule, *logPid, *logQuiet, execArgs[0], execArgs[1:len(execArgs)])
+	c, wg := gocron.Create(*schedule, *noLogPid, *logQuiet, execArgs[0], execArgs[1:len(execArgs)])
 
 	go gocron.Start(c)
 	if *port != "0" {

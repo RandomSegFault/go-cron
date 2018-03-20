@@ -30,7 +30,7 @@ type CurrentState struct {
 }
 
 var Current_state CurrentState
-var showPid bool
+var dontShowPid bool
 var beQuiet bool
 
 func copyOutput(out *string, src io.ReadCloser, pid int) {
@@ -41,10 +41,10 @@ func copyOutput(out *string, src io.ReadCloser, pid int) {
 			s := string(buf[:n])
 			*out = *out + s
 
-			if showPid {
-				log.Printf("%d: %v", pid, s)
-			} else {
+			if dontShowPid {
 				log.Printf("%v", s)
+			} else {
+				log.Printf("%d: %v", pid, s)
 			}
 		}
 		if err != nil {
@@ -79,7 +79,7 @@ func execute(command string, args []string) {
 	go copyOutput(&run.Stderr, stderr, run.Pid)
 
 	if !beQuiet {
-		if showPid {
+		if dontShowPid {
 			log.Println(run.Pid, "cmd:", command, strings.Join(args, " "))
 		} else {
 			log.Println("cmd:", command, strings.Join(args, " "))
@@ -107,13 +107,13 @@ func execute(command string, args []string) {
 	Current_state.Last = run
 }
 
-func Create(schedule string, logPid bool, logQuiet bool, command string, args []string) (cr *cron.Cron, wgr *sync.WaitGroup) {
+func Create(schedule string, noLogPid bool, logQuiet bool, command string, args []string) (cr *cron.Cron, wgr *sync.WaitGroup) {
 
 	wg := &sync.WaitGroup{}
 
 	c := cron.New()
 	Current_state = CurrentState{map[string]*LastRun{}, &LastRun{}, schedule}
-	showPid = logPid
+	dontShowPid = noLogPid
 	beQuiet = logQuiet
 
 	if !logQuiet {
