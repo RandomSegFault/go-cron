@@ -2,11 +2,12 @@ package main
 
 import (
 	"flag"
-	gocron "github.com/odise/go-cron"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	gocron "github.com/RandomSegFault/go-cron"
 )
 
 var build string
@@ -19,9 +20,16 @@ func main() {
 		help     = flag.Bool("h", false, "display usage")
 		port     = flag.String("p", "18080", "bind healthcheck to a specific port, set to 0 to not open HTTP port at all")
 		schedule = flag.String("s", "* * * * *", "schedule the task the cron style")
+		logDate  = flag.Bool("d", false, "print log timestamp")
+		logPid   = flag.Bool("pid", false, "print pid in logs")
+		logQuiet = flag.Bool("q", false, "only output the output of the command")
 	)
 
 	flag.Parse()
+
+	if !*logDate {
+		log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
+	}
 
 	if *help {
 		println("Usage of", os.Args[0], "(build", build, ")")
@@ -31,7 +39,7 @@ func main() {
 	}
 	log.Println("Running version:", build)
 
-	c, wg := gocron.Create(*schedule, execArgs[0], execArgs[1:len(execArgs)])
+	c, wg := gocron.Create(*schedule, *logPid, *logQuiet, execArgs[0], execArgs[1:len(execArgs)])
 
 	go gocron.Start(c)
 	if *port != "0" {

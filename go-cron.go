@@ -1,7 +1,6 @@
 package gocron
 
 import (
-	"github.com/robfig/cron"
 	"io"
 	"log"
 	"os"
@@ -11,6 +10,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/robfig/cron"
 )
 
 type LastRun struct {
@@ -29,6 +30,8 @@ type CurrentState struct {
 }
 
 var Current_state CurrentState
+var showPid bool
+var beQuiet bool
 
 func copyOutput(out *string, src io.ReadCloser, pid int) {
 	buf := make([]byte, 1024)
@@ -37,7 +40,12 @@ func copyOutput(out *string, src io.ReadCloser, pid int) {
 		if n != 0 {
 			s := string(buf[:n])
 			*out = *out + s
-			log.Printf("%d: %v", pid, s)
+
+			if showPid {
+				log.Printf("%d: %v", pid, s)
+			} else {
+				log.Printf("%v", s)
+			}
 		}
 		if err != nil {
 			break
@@ -70,7 +78,13 @@ func execute(command string, args []string) {
 	go copyOutput(&run.Stdout, stdout, run.Pid)
 	go copyOutput(&run.Stderr, stderr, run.Pid)
 
-	log.Println(run.Pid, "cmd:", command, strings.Join(args, " "))
+	if !beQuiet {
+		if showPid {
+			log.Println(run.Pid, "cmd:", command, strings.Join(args, " "))
+		} else {
+			log.Println("cmd:", command, strings.Join(args, " "))
+		}
+	}
 
 	if err := cmd.Wait(); err != nil {
 		if exiterr, ok := err.(*exec.ExitError); ok {
@@ -93,13 +107,18 @@ func execute(command string, args []string) {
 	Current_state.Last = run
 }
 
-func Create(schedule string, command string, args []string) (cr *cron.Cron, wgr *sync.WaitGroup) {
+func Create(schedule string, logPid bool, logQuiet bool, command string, args []string) (cr *cron.Cron, wgr *sync.WaitGroup) {
 
 	wg := &sync.WaitGroup{}
 
 	c := cron.New()
 	Current_state = CurrentState{map[string]*LastRun{}, &LastRun{}, schedule}
-	log.Println("new cron:", schedule)
+	showPid = logPid
+	beQuiet = logQuiet
+
+	if !logQuiet {
+		log.Println("new cron:", schedule)
+	}
 
 	c.AddFunc(schedule, func() {
 		wg.Add(1)
